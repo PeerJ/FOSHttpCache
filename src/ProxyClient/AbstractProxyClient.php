@@ -121,7 +121,7 @@ abstract class AbstractProxyClient implements ProxyClientInterface
     public function flush()
     {
         $queue = $this->queue;
-        if (0 === count($queue)) {
+        if ($queue && 0 === count($queue)) {
             return 0;
         }
 
