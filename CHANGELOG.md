@@ -3,68 +3,13 @@ Changelog
 
 See also the [GitHub releases page](https://github.com/FriendsOfSymfony/FOSHttpCache/releases).
 
-unreleased
-----------
+2.6.0 (unreleased)
+------------------
 
-### Symfony HttpCache
-
-* Added a neutral "Bad Request" body to user hash mismatch response to have
-  something searchable in the code when debugging.
-
-2.9.2
------
-
-### Proxy Client
-
-* Fix: Preserve inline credentials when multiplexing to the proxy servers.
-
-2.9.1
------
-
-### Proxy Client
-
-* Allow to use inline credentials for the caching proxy URL in the format http://user:pass@1.2.3.4
-
-2.9.0
------
-
-### General
-
-* Raised minimal PHP version to 7.1
-* Test helper classes upgraded to support PHPUnit 7/8
-* There is no php-http/discovery package 2.0, drop it from composer.json
-* Adapt for changes to NetworkException in HTTPlug 2.1 for PSR-18 compatibility
-
-### Symfony HttpCache
-
-* Fixed issue with `PurgeTagsListener` and Symfony 5
-* Fixed clearing the cache completely together with toflar psr6 store did not work
-
-2.8.0
------
-
-### General
-
-* Support Symfony 5
-* Use `LegacyEventDispatcherProxy` for Symfony >= 4.3 to avoid deprecation messages.
-* Added Fastly ProxyClient Adapter with ClearCapable, PurgeCapable, RefreshCapable, & TagCapable.
-  Fastly is a CDN originally based on Varnish 2.x, so with many of the same capabilities like VCL and more.
-
-2.7.0
------
-
-### Symfony HttpCache
-
-* Added request type to the CacheEvent.
-
-2.6.0
------
-
-### General
+### Cache Clear
 
 * Added: ClearCapable to clear the whole cache in one efficient call. Currently
   supported only by the Symfony HttpCache.
-* Allow installing with Httplug 2.0 / PSR-18.
 
 2.5.4
 -----
@@ -123,7 +68,7 @@ unreleased
 
 * Added: `CleanupCacheTagsListener` to remove the cache tags header from the final
   response that is sent to the client. Add this listener to your cache kernel.
-
+  
 ### Cache Tagging
 
 * Improved: The `ResponseTagger` does now remove duplicate tags.
@@ -281,7 +226,7 @@ unreleased
 
 * Varnish configuration are now files that you can directly include from your
   .vcl and call custom functions to avoid copy-pasting VCL code.
-* Added support for and changed default to Varnish version 5.
+* Added support for and changed default to Varnish version 5.  
 * Moved Varnish 4 and 5 configuration files from `resources/config/varnish-4/`
   to `resources/config/varnish/`.
 * Changed default Varnish version to 5.
@@ -305,7 +250,7 @@ unreleased
   `AppCache extends EventDispatchingHttpInterface` with a
   `use EventDispatchingHttpCache;` statement.
 * The user context by default does not use a hardcoded hash for anonymous users
-  but does a hash lookup. You can still configure a hardcoded hash.
+  but does a hash lookup. You can still configure a hardcoded hash.  
 
 ### Testing
 
@@ -320,12 +265,6 @@ unreleased
   `TagCapable` as first argument. To adjust the tag header name or the way the
   tags are formatted, use the new `header_formatter` option with a
   `TagHeaderFormatter`.
-
-1.4.6
------
-
-* [Symfony HttpCache] Added a neutral "Bad Request" body to user hash mismatch
-  response to have something searchable in the code when debugging.
 
 1.4.5
 -----

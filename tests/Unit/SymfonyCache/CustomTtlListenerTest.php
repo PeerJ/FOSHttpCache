@@ -25,11 +25,11 @@ class CustomTtlListenerTest extends TestCase
     use MockeryPHPUnitIntegration;
 
     /**
-     * @var CacheInvalidation&MockInterface
+     * @var CacheInvalidation|MockInterface
      */
     private $kernel;
 
-    public function setUp(): void
+    public function setUp()
     {
         $this->kernel = \Mockery::mock(CacheInvalidation::class);
     }

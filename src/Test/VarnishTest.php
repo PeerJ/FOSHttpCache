@@ -59,7 +59,7 @@ trait VarnishTest
     /**
      * Start Varnish and discard any cached content.
      */
-    protected function setUp(): void
+    protected function setUp()
     {
         $this->getProxy()->clear();
     }
@@ -67,7 +67,7 @@ trait VarnishTest
     /**
      * Stop Varnish.
      */
-    protected function tearDown(): void
+    protected function tearDown()
     {
         $this->getProxy()->stop();
     }

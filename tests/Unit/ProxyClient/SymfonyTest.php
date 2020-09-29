@@ -27,7 +27,7 @@ class SymfonyTest extends TestCase
      */
     private $httpDispatcher;
 
-    protected function setUp(): void
+    protected function setUp()
     {
         $this->httpDispatcher = \Mockery::mock(HttpDispatcher::class);
     }
@@ -46,8 +46,7 @@ class SymfonyTest extends TestCase
 
                     return true;
                 }
-            ),
-            true
+            ), true
         );
 
         $symfony->purge('/url', ['X-Foo' => 'bar']);
@@ -63,7 +62,7 @@ class SymfonyTest extends TestCase
                     $this->assertEquals('PURGETAGS', $request->getMethod());
 
                     $this->assertEquals('/', $request->getUri());
-                    $this->assertStringContainsString('foobar,other tag', $request->getHeaderLine('X-Cache-Tags'));
+                    $this->assertContains('foobar,other tag', $request->getHeaderLine('X-Cache-Tags'));
 
                     return true;
                 }
@@ -174,7 +173,7 @@ class SymfonyTest extends TestCase
                     $this->assertEquals('GET', $request->getMethod());
 
                     $this->assertEquals('/fresh', $request->getUri());
-                    $this->assertStringContainsString('no-cache', $request->getHeaderLine('Cache-Control'));
+                    $this->assertContains('no-cache', $request->getHeaderLine('Cache-Control'));
 
                     return true;
                 }

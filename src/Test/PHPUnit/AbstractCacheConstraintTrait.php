@@ -11,7 +11,6 @@
 
 namespace FOS\HttpCache\Test\PHPUnit;
 
-use PHPUnit\Runner\Version;
 use Psr\Http\Message\ResponseInterface;
 
 /**
@@ -32,9 +31,7 @@ trait AbstractCacheConstraintTrait
             $this->header = $header;
         }
 
-        if (version_compare(Version::id(), '8.0.0', '<')) {
-            parent::__construct();
-        }
+        parent::__construct();
     }
 
     /**
@@ -42,7 +39,7 @@ trait AbstractCacheConstraintTrait
      *
      * @param ResponseInterface $other The guzzle response object
      */
-    public function matches($other): bool
+    public function matches($other)
     {
         if (!$other instanceof ResponseInterface) {
             throw new \RuntimeException(sprintf('Expected a GuzzleHttp\Psr7\Response but got %s', get_class($other)));
@@ -78,7 +75,7 @@ trait AbstractCacheConstraintTrait
     /**
      * {@inheritdoc}
      */
-    public function failureDescription($other): string
+    public function failureDescription($other)
     {
         return sprintf(
             'response (with status code %s) %s',

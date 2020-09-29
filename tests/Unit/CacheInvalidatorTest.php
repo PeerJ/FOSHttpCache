@@ -24,7 +24,7 @@ use FOS\HttpCache\ProxyClient\Invalidation\TagCapable;
 use FOS\HttpCache\ProxyClient\ProxyClient;
 use FOS\HttpCache\ProxyClient\Varnish;
 use Http\Client\Exception\HttpException;
-use Http\Client\Exception\NetworkException;
+use Http\Client\Exception\RequestException;
 use Mockery\Adapter\Phpunit\MockeryPHPUnitIntegration;
 use Mockery\MockInterface;
 use PHPUnit\Framework\TestCase;
@@ -32,7 +32,6 @@ use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\EventDispatcher\EventDispatcher;
-use Symfony\Component\EventDispatcher\LegacyEventDispatcherProxy;
 
 class CacheInvalidatorTest extends TestCase
 {
@@ -40,7 +39,7 @@ class CacheInvalidatorTest extends TestCase
 
     public function testSupportsTrue()
     {
-        /** @var MockInterface&Varnish $proxyClient */
+        /** @var MockInterface|Varnish $proxyClient */
         $proxyClient = \Mockery::mock(Varnish::class);
 
         $cacheInvalidator = new CacheInvalidator($proxyClient);
@@ -53,7 +52,7 @@ class CacheInvalidatorTest extends TestCase
 
     public function testSupportsFalse()
     {
-        /** @var MockInterface&ProxyClient $proxyClient */
+        /** @var MockInterface|ProxyClient $proxyClient */
         $proxyClient = \Mockery::mock(ProxyClient::class);
 
         $cacheInvalidator = new CacheInvalidator($proxyClient);
@@ -64,20 +63,22 @@ class CacheInvalidatorTest extends TestCase
         $this->assertFalse($cacheInvalidator->supports(CacheInvalidator::TAGS));
     }
 
+    /**
+     * @expectedException \InvalidArgumentException
+     */
     public function testSupportsInvalid()
     {
-        /** @var MockInterface&ProxyClient $proxyClient */
+        /** @var MockInterface|ProxyClient $proxyClient */
         $proxyClient = \Mockery::mock(ProxyClient::class);
 
         $cacheInvalidator = new CacheInvalidator($proxyClient);
 
-        $this->expectException(\InvalidArgumentException::class);
         $cacheInvalidator->supports('garbage');
     }
 
     public function testInvalidatePath()
     {
-        /** @var MockInterface&PurgeCapable $purge */
+        /** @var MockInterface|PurgeCapable $purge */
         $purge = \Mockery::mock(PurgeCapable::class)
             ->shouldReceive('purge')->once()->with('/my/route', [])
             ->shouldReceive('purge')->once()->with('/my/route', ['X-Test-Header' => 'xyz'])
@@ -96,7 +97,7 @@ class CacheInvalidatorTest extends TestCase
     public function testRefreshPath()
     {
         $headers = ['X' => 'Y'];
-        /** @var MockInterface&RefreshCapable $refresh */
+        /** @var MockInterface|RefreshCapable $refresh */
         $refresh = \Mockery::mock(RefreshCapable::class)
             ->shouldReceive('refresh')->once()->with('/my/route', $headers)
             ->shouldReceive('flush')->never()
@@ -116,7 +117,7 @@ class CacheInvalidatorTest extends TestCase
             'Other-Header' => '^a|b|c$',
         ];
 
-        /** @var MockInterface&BanCapable $ban */
+        /** @var MockInterface|BanCapable $ban */
         $ban = \Mockery::mock(BanCapable::class)
             ->shouldReceive('ban')
             ->with($headers)
@@ -134,7 +135,7 @@ class CacheInvalidatorTest extends TestCase
             'post-type-2',
         ];
 
-        /** @var MockInterface&TagCapable $tagHandler */
+        /** @var MockInterface|TagCapable $tagHandler */
         $tagHandler = \Mockery::mock(TagCapable::class)
             ->shouldReceive('invalidateTags')
             ->with($tags)
@@ -147,7 +148,7 @@ class CacheInvalidatorTest extends TestCase
 
     public function testInvalidateRegex()
     {
-        /** @var MockInterface&BanCapable $ban */
+        /** @var MockInterface|BanCapable $ban */
         $ban = \Mockery::mock(BanCapable::class)
             ->shouldReceive('banPath')
             ->with('/a', 'b', ['example.com'])
@@ -160,7 +161,7 @@ class CacheInvalidatorTest extends TestCase
 
     public function testMethodException()
     {
-        /** @var MockInterface&ProxyClient $proxyClient */
+        /** @var MockInterface|ProxyClient $proxyClient */
         $proxyClient = \Mockery::mock(ProxyClient::class);
         $cacheInvalidator = new CacheInvalidator($proxyClient);
 
@@ -200,13 +201,16 @@ class CacheInvalidatorTest extends TestCase
         }
     }
 
+    /**
+     * @expectedException \FOS\HttpCache\Exception\ExceptionCollection
+     */
     public function testProxyClientExceptionsAreLogged()
     {
-        /** @var MockInterface&RequestInterface $failedRequest */
+        /** @var MockInterface|RequestInterface $failedRequest */
         $failedRequest = \Mockery::mock(RequestInterface::class)
             ->shouldReceive('getHeaderLine')->with('Host')->andReturn('127.0.0.1')
             ->getMock();
-        $clientException = new NetworkException('Couldn\'t connect to host', $failedRequest);
+        $clientException = new RequestException('Couldn\'t connect to host', $failedRequest);
 
         $unreachableException = ProxyUnreachableException::proxyUnreachable($clientException);
 
@@ -219,7 +223,7 @@ class CacheInvalidatorTest extends TestCase
         $exceptions = new ExceptionCollection();
         $exceptions->add($unreachableException)->add($responseException);
 
-        /** @var MockInterface&ProxyClient $proxyClient */
+        /** @var MockInterface|ProxyClient $proxyClient */
         $proxyClient = \Mockery::mock(ProxyClient::class)
             ->shouldReceive('flush')->once()->andThrow($exceptions)
             ->getMock();
@@ -243,7 +247,6 @@ class CacheInvalidatorTest extends TestCase
 
         $cacheInvalidator->getEventDispatcher()->addSubscriber(new LogListener($logger));
 
-        $this->expectException(ExceptionCollection::class);
         $cacheInvalidator
             ->flush()
         ;
@@ -251,32 +254,22 @@ class CacheInvalidatorTest extends TestCase
 
     public function testEventDispatcher()
     {
-        /** @var MockInterface&Varnish $proxyClient */
+        /** @var MockInterface|Varnish $proxyClient */
         $proxyClient = \Mockery::mock(Varnish::class);
 
-        if (class_exists(LegacyEventDispatcherProxy::class)) {
-            $eventDispatcher = LegacyEventDispatcherProxy::decorate(new EventDispatcher());
-        } else {
-            $eventDispatcher = new EventDispatcher();
-        }
-
         $cacheInvalidator = new CacheInvalidator($proxyClient);
+        $eventDispatcher = new EventDispatcher();
         $cacheInvalidator->setEventDispatcher($eventDispatcher);
         $this->assertSame($eventDispatcher, $cacheInvalidator->getEventDispatcher());
     }
 
     public function testEventDispatcherImmutable()
     {
-        /** @var MockInterface&Varnish $proxyClient */
+        /** @var MockInterface|Varnish $proxyClient */
         $proxyClient = \Mockery::mock(Varnish::class);
 
-        if (class_exists(LegacyEventDispatcherProxy::class)) {
-            $eventDispatcher = LegacyEventDispatcherProxy::decorate(new EventDispatcher());
-        } else {
-            $eventDispatcher = new EventDispatcher();
-        }
-
         $cacheInvalidator = new CacheInvalidator($proxyClient);
+        $eventDispatcher = new EventDispatcher();
         $cacheInvalidator->setEventDispatcher($eventDispatcher);
         $this->expectException(\Exception::class);
         $cacheInvalidator->setEventDispatcher($eventDispatcher);

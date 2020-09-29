@@ -11,7 +11,7 @@
 
 namespace FOS\HttpCache\Exception;
 
-use Http\Client\Exception\NetworkException;
+use Http\Client\Exception\RequestException;
 
 /**
  * Thrown when a request to the reverse caching proxy fails to establish a
@@ -20,9 +20,11 @@ use Http\Client\Exception\NetworkException;
 class ProxyUnreachableException extends \RuntimeException implements HttpCacheException
 {
     /**
+     * @param RequestException $requestException
+     *
      * @return ProxyUnreachableException
      */
-    public static function proxyUnreachable(NetworkException $requestException)
+    public static function proxyUnreachable(RequestException $requestException)
     {
         $message = sprintf(
             'Request to caching proxy at %s failed with message "%s"',

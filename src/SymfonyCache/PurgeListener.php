@@ -13,7 +13,7 @@ namespace FOS\HttpCache\SymfonyCache;
 
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\OptionsResolver\OptionsResolver;
-use Toflar\Psr6HttpCacheStore\ClearableInterface;
+use Toflar\Psr6HttpCacheStore\Psr6StoreInterface;
 
 /**
  * Purge handler for the symfony built-in HttpCache.
@@ -98,17 +98,17 @@ class PurgeListener extends AccessControlledListener
 
         // Purge whole cache
         if ($request->headers->has($this->clearCacheHeader)) {
-            if (!$store instanceof ClearableInterface) {
+            if (!$store instanceof Psr6StoreInterface) {
                 $response->setStatusCode(400);
-                $response->setContent('Store must be an instance of '.ClearableInterface::class.'. Please check your proxy configuration.');
+                $response->setContent('Store must be an instance of '.Psr6StoreInterface::class.'. Please check your proxy configuration.');
                 $event->setResponse($response);
 
                 return;
             }
 
-            $store->clear();
+            $store->prune();
 
-            $response->setStatusCode(200, 'Purged');
+            $response->setStatusCode(200, 'Pruned');
             $event->setResponse($response);
 
             return;

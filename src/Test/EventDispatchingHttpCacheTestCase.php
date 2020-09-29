@@ -62,8 +62,6 @@ abstract class EventDispatchingHttpCacheTestCase extends TestCase
             'allow_revalidate' => false,
             'stale_while_revalidate' => 2,
             'stale_if_error' => 60,
-            'trace_level' => 'full',
-            'trace_header' => 'FOSHttpCache',
         ];
 
         $refHttpCache = new \ReflectionClass(HttpCache::class);

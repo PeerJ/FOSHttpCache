@@ -13,13 +13,11 @@ namespace FOS\HttpCache\Tests\Unit\ProxyClient;
 
 use FOS\HttpCache\Exception\ExceptionCollection;
 use FOS\HttpCache\Exception\InvalidArgumentException;
-use FOS\HttpCache\Exception\InvalidUrlException;
-use FOS\HttpCache\Exception\MissingHostException;
 use FOS\HttpCache\Exception\ProxyResponseException;
 use FOS\HttpCache\Exception\ProxyUnreachableException;
 use FOS\HttpCache\ProxyClient\HttpDispatcher;
 use Http\Client\Exception\HttpException;
-use Http\Client\Exception\NetworkException;
+use Http\Client\Exception\RequestException;
 use Http\Client\HttpAsyncClient;
 use Http\Discovery\MessageFactoryDiscovery;
 use Http\Discovery\UriFactoryDiscovery;
@@ -53,18 +51,19 @@ class HttpDispatcherTest extends TestCase
      */
     private $uriFactory;
 
-    protected function setUp(): void
+    protected function setUp()
     {
         $this->httpClient = new Client();
         $this->messageFactory = MessageFactoryDiscovery::find();
         $this->uriFactory = UriFactoryDiscovery::find();
     }
 
+    /**
+     * @expectedException \InvalidArgumentException
+     * @expectedExceptionMessage URI parameter must be a string, object given
+     */
     public function testInstantiateWithNonUri()
     {
-        $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('URI parameter must be a string, object given');
-
         new HttpDispatcher(
             ['127.0.0.1:123'],
             $this
@@ -79,21 +78,6 @@ class HttpDispatcherTest extends TestCase
      * @param string     $message   Optional exception message to match against
      */
     public function testExceptions(\Exception $exception, $type, $message = null)
-    {
-        $this->doTestException($exception, $type, $message);
-    }
-
-    /**
-     * Ensure that exceptions by HTTP clients that do not conform to the final standard are nonetheless correctly handled.
-     *
-     * @group legacy
-     */
-    public function testLegacyException()
-    {
-        $this->doTestException(new \Exception('something went completely wrong'), InvalidArgumentException::class, 'something went completely wrong');
-    }
-
-    private function doTestException(\Exception $exception, $type, $message)
     {
         $this->httpClient->addException($exception);
         $httpDispatcher = new HttpDispatcher(
@@ -110,7 +94,10 @@ class HttpDispatcherTest extends TestCase
             $this->assertCount(1, $exceptions);
             $this->assertInstanceOf($type, $exceptions->getFirst());
             if ($message) {
-                $this->assertStringContainsString($message, $exceptions->getFirst()->getMessage());
+                $this->assertContains(
+                    $message,
+                    $exceptions->getFirst()->getMessage()
+                );
             }
         }
 
@@ -146,18 +133,24 @@ class HttpDispatcherTest extends TestCase
                 '400',
             ],
             [
-                new NetworkException('test', $request),
+                new RequestException('test', $request),
                 ProxyUnreachableException::class,
                 'bla.com',
+            ],
+            [
+                new \Exception('something went completely wrong'),
+                InvalidArgumentException::class,
+                'something went completely wrong',
             ],
         ];
     }
 
+    /**
+     * @expectedException \FOS\HttpCache\Exception\MissingHostException
+     * @expectedExceptionMessage cannot be invalidated without a host
+     */
     public function testMissingHostExceptionIsThrown()
     {
-        $this->expectException(MissingHostException::class);
-        $this->expectExceptionMessage('cannot be invalidated without a host');
-
         $httpDispatcher = new HttpDispatcher(
             ['127.0.0.1:123'],
             '',
@@ -196,26 +189,6 @@ class HttpDispatcherTest extends TestCase
         $this->assertEquals('fos.lo', $requests[0]->getHeaderLine('Host'));
     }
 
-    public function testServerWithUserInfo()
-    {
-        $httpDispatcher = new HttpDispatcher(
-            ['http://userone:passone@127.0.0.1', 'http://127.0.0.2', 'http://usertwo:passtwo@127.0.0.2'],
-            'fos.lo',
-            $this->httpClient
-        );
-
-        $request = $this->messageFactory->createRequest('PURGE', '/path');
-        $httpDispatcher->invalidate($request);
-        $httpDispatcher->flush();
-
-        $requests = $this->getRequests();
-
-        $this->assertCount(3, $requests);
-        $this->assertEquals('userone:passone', $requests[0]->getUri()->getUserInfo());
-        $this->assertEquals('', $requests[1]->getUri()->getUserInfo());
-        $this->assertEquals('usertwo:passtwo', $requests[2]->getUri()->getUserInfo());
-    }
-
     public function testSetBasePathWithPath()
     {
         $httpDispatcher = new HttpDispatcher(
@@ -223,7 +196,7 @@ class HttpDispatcherTest extends TestCase
             'http://fos.lo/my/path',
             $this->httpClient
         );
-        $request = $this->messageFactory->createRequest('PURGE', '/append');
+        $request = $this->messageFactory->createRequest('PURGE', 'append');
         $httpDispatcher->invalidate($request);
         $httpDispatcher->flush();
 
@@ -266,36 +239,37 @@ class HttpDispatcherTest extends TestCase
         $this->assertEquals('http://127.0.0.1:8080/some/path', $requests[0]->getUri());
     }
 
+    /**
+     * @expectedException \FOS\HttpCache\Exception\InvalidUrlException
+     * @expectedExceptionMessage URL "http:///this is no url" is invalid.
+     */
     public function testSetServersThrowsInvalidUrlException()
     {
-        $this->expectException(InvalidUrlException::class);
-        $this->expectExceptionMessage('URL "http:///this is no url" is invalid.');
-
         new HttpDispatcher(['http:///this is no url']);
     }
 
+    /**
+     * @expectedException \FOS\HttpCache\Exception\InvalidUrlException
+     * @expectedExceptionMessage URL "this ://is no url" is invalid.
+     */
     public function testSetServersThrowsWeirdInvalidUrlException()
     {
-        $this->expectException(InvalidUrlException::class);
-        $this->expectExceptionMessage('URL "this ://is no url" is invalid.');
-
         new HttpDispatcher(['this ://is no url']);
     }
 
+    /**
+     * @expectedException \FOS\HttpCache\Exception\InvalidUrlException
+     * @expectedExceptionMessage Server "http://127.0.0.1:80/some/path" is invalid. Only scheme, host, port URL parts are allowed
+     */
     public function testSetServersThrowsInvalidServerException()
     {
-        $this->expectException(InvalidUrlException::class);
-        $this->expectExceptionMessage('Server "http://127.0.0.1:80/some/path" is invalid. Only scheme, user, pass, host, port URL parts are allowed');
-
         new HttpDispatcher(['http://127.0.0.1:80/some/path']);
     }
 
     public function testFlushEmpty()
     {
         $httpDispatcher = new HttpDispatcher(
-            ['127.0.0.1', '127.0.0.2'],
-            'fos.lo',
-            $this->httpClient
+            ['127.0.0.1', '127.0.0.2'], 'fos.lo', $this->httpClient
         );
         $this->assertEquals(0, $httpDispatcher->flush());
 
@@ -383,7 +357,7 @@ class HttpDispatcherTest extends TestCase
     }
 
     /**
-     * @return RequestInterface[]
+     * @return array|RequestInterface[]
      */
     protected function getRequests()
     {
