@@ -12,7 +12,6 @@
 namespace FOS\HttpCache\Tests\Unit\Test\PHPUnit;
 
 use FOS\HttpCache\Test\PHPUnit\IsCacheMissConstraint;
-use PHPUnit\Framework\ExpectationFailedException;
 
 // phpunit 5 has forward compatibility classes but missed this one
 if (!class_exists('\PHPUnit\Framework\ExpectationFailedException')) {
@@ -26,11 +25,15 @@ class IsCacheMissConstraintTest extends AbstractCacheConstraintTest
      */
     private $constraint;
 
-    public function setUp(): void
+    public function setUp()
     {
         $this->constraint = new IsCacheMissConstraint('cache-header');
     }
 
+    /**
+     * @expectedException \PHPUnit\Framework\ExpectationFailedException
+     * @expectedExceptionMessage Failed asserting that response (with status code 200) is a cache miss
+     */
     public function testMatches()
     {
         $response = $this->getResponseMock()
@@ -38,9 +41,6 @@ class IsCacheMissConstraintTest extends AbstractCacheConstraintTest
             ->shouldReceive('getHeaderLine')->with('cache-header')->once()->andReturn('HIT')
             ->shouldReceive('getStatusCode')->andReturn(200)
             ->getMock();
-
-        $this->expectException(ExpectationFailedException::class);
-        $this->expectExceptionMessage('Failed asserting that response (with status code 200) is a cache miss');
 
         $this->constraint->evaluate($response);
     }

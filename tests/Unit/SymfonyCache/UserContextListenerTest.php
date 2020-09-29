@@ -29,7 +29,7 @@ class UserContextListenerTest extends TestCase
      */
     private $kernel;
 
-    public function setUp(): void
+    public function setUp()
     {
         $this->kernel = \Mockery::mock(CacheInvalidation::class);
     }
@@ -76,7 +76,6 @@ class UserContextListenerTest extends TestCase
 
         $this->assertInstanceOf(Response::class, $response);
         $this->assertSame(400, $response->getStatusCode());
-        $this->assertSame('Bad Request', $response->getContent());
     }
 
     /**
@@ -95,7 +94,6 @@ class UserContextListenerTest extends TestCase
 
         $this->assertInstanceOf(Response::class, $response);
         $this->assertSame(400, $response->getStatusCode());
-        $this->assertSame('Bad Request', $response->getContent());
     }
 
     /**
@@ -307,10 +305,12 @@ class UserContextListenerTest extends TestCase
         $this->assertSame($expectedContextHash, $request->headers->get($options['user_hash_header']));
     }
 
+    /**
+     * @expectedException \InvalidArgumentException
+     * @expectedExceptionMessage does not exist
+     */
     public function testInvalidConfiguration()
     {
-        $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('does not exist');
         new UserContextListener(['foo' => 'bar']);
     }
 

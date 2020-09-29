@@ -16,7 +16,7 @@ class IsCacheHitConstraint extends AbstractCacheConstraint
     /**
      * {@inheritdoc}
      */
-    public function toString(): string
+    public function toString()
     {
         return 'is a cache hit';
     }

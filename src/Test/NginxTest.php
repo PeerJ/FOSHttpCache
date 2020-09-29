@@ -51,12 +51,12 @@ trait NginxTest
      */
     protected $proxy;
 
-    protected function setUp(): void
+    protected function setUp()
     {
         $this->getProxy()->clear();
     }
 
-    protected function tearDown(): void
+    protected function tearDown()
     {
         $this->getProxy()->stop();
     }

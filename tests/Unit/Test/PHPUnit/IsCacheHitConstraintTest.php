@@ -13,7 +13,6 @@ namespace FOS\HttpCache\Tests\Unit\Test\PHPUnit;
 
 use FOS\HttpCache\Test\PHPUnit\IsCacheHitConstraint;
 use GuzzleHttp\Psr7\Stream;
-use PHPUnit\Framework\ExpectationFailedException;
 
 // phpunit 5 has forward compatibility classes but missed this one
 if (!class_exists('\PHPUnit\Framework\ExpectationFailedException')) {
@@ -27,11 +26,15 @@ class IsCacheHitConstraintTest extends AbstractCacheConstraintTest
      */
     private $constraint;
 
-    public function setUp(): void
+    public function setUp()
     {
         $this->constraint = new IsCacheHitConstraint('cache-header');
     }
 
+    /**
+     * @expectedException \PHPUnit\Framework\ExpectationFailedException
+     * @expectedExceptionMessage Failed asserting that response (with status code 500) is a cache hit
+     */
     public function testMatches()
     {
         $response = $this->getResponseMock()
@@ -42,16 +45,15 @@ class IsCacheHitConstraintTest extends AbstractCacheConstraintTest
             ->shouldReceive('getBody')->andReturn(new Stream(fopen('php://temp', 'r+')))
             ->getMock();
 
-        $this->expectException(ExpectationFailedException::class);
-        $this->expectExceptionMessage('Failed asserting that response (with status code 500) is a cache hit');
         $this->constraint->evaluate($response);
     }
 
+    /**
+     * @expectedException \RuntimeException
+     * @expectedExceptionMessage Response has no "cache-header" header
+     */
     public function testMatchesThrowsExceptionIfHeaderIsMissing()
     {
-        $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage('Response has no "cache-header" header');
-
         $response = $this->getResponseMock()
             ->shouldReceive('hasHeader')->with('cache-header')->once()->andReturn(false)
             ->shouldReceive('getStatusCode')->andReturn(200)
