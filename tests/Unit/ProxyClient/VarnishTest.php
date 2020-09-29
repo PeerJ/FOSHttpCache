@@ -11,6 +11,7 @@
 
 namespace FOS\HttpCache\Tests\Unit\ProxyClient;
 
+use FOS\HttpCache\Exception\InvalidArgumentException;
 use FOS\HttpCache\ProxyClient\HttpDispatcher;
 use FOS\HttpCache\ProxyClient\Varnish;
 use Mockery\Adapter\Phpunit\MockeryPHPUnitIntegration;
@@ -27,7 +28,7 @@ class VarnishTest extends TestCase
      */
     private $httpDispatcher;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->httpDispatcher = \Mockery::mock(HttpDispatcher::class);
     }
@@ -56,7 +57,8 @@ class VarnishTest extends TestCase
 
                     return true;
                 }
-            ), false
+            ),
+            false
         );
 
         $varnish->ban([
@@ -78,7 +80,8 @@ class VarnishTest extends TestCase
 
                     return true;
                 }
-            ), false
+            ),
+            false
         );
         $hosts = ['fos.lo', 'fos2.lo'];
         $varnish->banPath('/articles/.*', 'text/html', $hosts);
@@ -99,7 +102,8 @@ class VarnishTest extends TestCase
 
                     return true;
                 }
-            ), false
+            ),
+            false
         );
 
         $varnish->invalidateTags(['post-1', 'post,type-3']);
@@ -121,20 +125,19 @@ class VarnishTest extends TestCase
 
                     return true;
                 }
-            ), false
+            ),
+            false
         );
 
         $varnish->invalidateTags(['post-1', 'post,type-3']);
     }
 
-    /**
-     * @expectedException \FOS\HttpCache\Exception\InvalidArgumentException
-     */
     public function testBanPathEmptyHost()
     {
         $varnish = new Varnish($this->httpDispatcher);
 
         $hosts = [];
+        $this->expectException(InvalidArgumentException::class);
         $varnish->banPath('/articles/.*', 'text/html', $hosts);
     }
 
@@ -160,7 +163,8 @@ class VarnishTest extends TestCase
 
                     return true;
                 }
-            ), false
+            ),
+            false
         );
 
         $varnish->invalidateTags(['mytag', 'othertag']);
@@ -181,7 +185,8 @@ class VarnishTest extends TestCase
 
                     return true;
                 }
-            ), false
+            ),
+            false
         );
 
         $varnish->invalidateTags(['post-1', 'post,type-3']);
@@ -209,7 +214,8 @@ class VarnishTest extends TestCase
 
                     return true;
                 }
-            ), true
+            ),
+            true
         );
 
         $varnish->purge('/url', ['X-Foo' => 'bar']);
@@ -223,11 +229,12 @@ class VarnishTest extends TestCase
                 function (RequestInterface $request) {
                     $this->assertEquals('GET', $request->getMethod());
                     $this->assertEquals('/fresh', $request->getUri());
-                    $this->assertContains('no-cache', $request->getHeaderLine('Cache-Control'));
+                    $this->assertStringContainsString('no-cache', $request->getHeaderLine('Cache-Control'));
 
                     return true;
                 }
-            ), true
+            ),
+            true
         );
 
         $varnish->refresh('/fresh');

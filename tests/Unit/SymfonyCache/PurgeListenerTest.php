@@ -29,12 +29,11 @@ class PurgeListenerTest extends TestCase
 
     /**
      * This tests a sanity check in the AbstractControlledListener.
-     *
-     * @expectedException \InvalidArgumentException
-     * @expectedExceptionMessage You may not set both a request matcher and an IP
      */
     public function testConstructorOverspecified()
     {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('You may not set both a request matcher and an IP');
         new PurgeListener([
             'client_matcher' => new RequestMatcher('/forbidden'),
             'client_ips' => ['1.2.3.4'],
@@ -71,7 +70,7 @@ class PurgeListenerTest extends TestCase
 
         /** @var Psr6Store $store */
         $store = \Mockery::mock(Psr6Store::class)
-            ->shouldReceive('prune')
+            ->shouldReceive('clear')
             ->once()
             ->getMock();
         $kernel = $this->getKernelMock($store);
@@ -93,18 +92,15 @@ class PurgeListenerTest extends TestCase
         /** @var StoreInterface $store */
         $store = \Mockery::mock(StoreInterface::class);
         $kernel = $this->getKernelMock($store);
-
         $purgeListener = new PurgeListener();
         $request = Request::create('http://example.com/', 'PURGE');
         $request->headers->set('Clear-Cache', 'true');
         $event = new CacheEvent($kernel, $request);
-
         $purgeListener->handlePurge($event);
         $response = $event->getResponse();
-
         $this->assertInstanceOf(Response::class, $response);
         $this->assertSame(400, $response->getStatusCode());
-        $this->assertSame('Store must be an instance of Toflar\Psr6HttpCacheStore\Psr6StoreInterface. Please check your proxy configuration.', $response->getContent());
+        $this->assertSame('Store must be an instance of Toflar\Psr6HttpCacheStore\ClearableInterface. Please check your proxy configuration.', $response->getContent());
     }
 
     public function testPurgeAllowedMiss()
@@ -181,12 +177,10 @@ class PurgeListenerTest extends TestCase
         $this->assertNull($event->getResponse());
     }
 
-    /**
-     * @expectedException \InvalidArgumentException
-     * @expectedExceptionMessage does not exist
-     */
     public function testInvalidConfiguration()
     {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('does not exist');
         new PurgeListener(['stuff' => '1.2.3.4']);
     }
 

@@ -20,7 +20,7 @@ use FOS\HttpCache\Exception\ProxyUnreachableException;
 use Http\Client\Common\Plugin\ErrorPlugin;
 use Http\Client\Common\PluginClient;
 use Http\Client\Exception\HttpException;
-use Http\Client\Exception\RequestException;
+use Http\Client\Exception\NetworkException;
 use Http\Client\HttpAsyncClient;
 use Http\Discovery\HttpAsyncClientDiscovery;
 use Http\Discovery\UriFactoryDiscovery;
@@ -152,7 +152,7 @@ class HttpDispatcher implements Dispatcher
                 $promise->wait();
             } catch (HttpException $exception) {
                 $exceptions->add(ProxyResponseException::proxyResponse($exception));
-            } catch (RequestException $exception) {
+            } catch (NetworkException $exception) {
                 $exceptions->add(ProxyUnreachableException::proxyUnreachable($exception));
             } catch (\Exception $exception) {
                 // @codeCoverageIgnoreStart
@@ -223,13 +223,18 @@ class HttpDispatcher implements Dispatcher
 
         // Create a request to each caching proxy server
         foreach ($this->getServers() as $server) {
-            $requests[] = $request->withUri(
-                $uri
-                    ->withScheme($server->getScheme())
-                    ->withHost($server->getHost())
-                    ->withPort($server->getPort()),
-                true    // Preserve application Host header
-            );
+            $serverUri = $uri
+                ->withScheme($server->getScheme())
+                ->withHost($server->getHost())
+                ->withPort($server->getPort());
+
+            if ($userInfo = $server->getUserInfo()) {
+                $userInfoParts = explode(':', $userInfo, 2);
+                $serverUri = $serverUri
+                    ->withUserInfo($userInfoParts[0], $userInfoParts[1] ?? null);
+            }
+
+            $requests[] = $request->withUri($serverUri, true); // Preserve application Host header
         }
 
         return $requests;
@@ -249,7 +254,7 @@ class HttpDispatcher implements Dispatcher
     {
         $this->servers = [];
         foreach ($servers as $server) {
-            $this->servers[] = $this->filterUri($server, ['scheme', 'host', 'port']);
+            $this->servers[] = $this->filterUri($server, ['scheme', 'user', 'pass', 'host', 'port']);
         }
     }
 
